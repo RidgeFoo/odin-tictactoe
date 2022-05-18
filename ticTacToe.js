@@ -28,21 +28,24 @@ Display element that congratulates the winner
 const gameBoard = (function () {
   const grid = [null, null, null, null, null, null, null, null, null];
 
-  function updateGrid(index, player = "X") {
+  function updateBoard(index, player = "X") {
     if (!grid[index]) {
       grid.splice(index, 1, player);
     }
   }
-  return { grid, updateGrid };
+  return { grid, updateBoard };
 })();
 
 const displayController = (function () {
   const gameBoardGrid = document.querySelectorAll(".box");
+  const form = document.querySelector("form");
+  const submitButton = document.querySelector("#submit");
+  const resetButton = document.querySelector("#reset");
 
   // Setup Event Listeners
   gameBoardGrid.forEach((box, index) => {
     box.addEventListener("click", () => {
-      gameBoard.updateGrid(index);
+      gameBoard.updateBoard(index);
       render();
     });
   });
@@ -57,6 +60,7 @@ const displayController = (function () {
   return { render };
 })();
 
-function Player(name) {
+function player(name) {
+
   return { name };
 }
