@@ -4,6 +4,9 @@
   --color-primary-font: #e2e8f0;
   --border-radius-game-board: 8px;
   --font-family:  "Indie Flower", cursive;
+  --grid-size: 400px;
+  --box-size: calc(var(--grid-size) / 3);
+  --box-font-size: calc(var(--box-size) * 0.9);
 }
 
 html {
@@ -73,44 +76,41 @@ input {
 }
 
 .game-board {
-  width: 400px;
-  height: 400px;
-  /* margin: auto; */
+  width: var(--grid-size);
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, auto);
   background-color: var(--color-primary-font);
-  border-radius: var(--border-radius-game-board);
-  gap: 1px;
-  padding: 1px;
 }
 
 .box {
   background-color: var(--color-secondary-background);
-  display: grid;
+  display: flex;
   justify-content: center;
-  align-content: center;
-  font-size: 68px;
+  align-items: center;
+  width: var(--box-size);
+  height: var(--box-size);
+  font-size: var(--box-font-size);
+  border: 1px solid var(--color-primary-font);
+}
+
+.box:nth-child(-n+3) {
+  border-top: none;
+}
+
+.box:nth-child(3n+3) {
+  border-right: none;
+}
+
+.box:nth-child(3n-2) {
+  border-left: none;
+}
+
+.box:nth-child(n+7) {
+  border-bottom: none;
 }
 
 .box:hover {
   background-color: var(--color-primary-font);
   cursor: pointer;
   color: var(--color-primary-background);
-}
-
-.box:first-of-type {
-  border-top-left-radius: var(--border-radius-game-board);
-}
-
-.box:nth-child(3) {
-  border-top-right-radius: var(--border-radius-game-board);
-}
-
-.box:last-of-type {
-  border-bottom-right-radius: var(--border-radius-game-board);
-}
-
-.box:nth-child(7) {
-  border-bottom-left-radius: var(--border-radius-game-board);
 }
