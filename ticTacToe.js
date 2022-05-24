@@ -1,54 +1,72 @@
-/*
-As little as possible in Global State
-
-1. gameBoard module
-  - Array for the tic tac toe.
-  - Must control the flow of the game itself.
-2. Player factory function
-3. displayController module
-
-✅ Render the contents of the gameBoard array to the page.
-  - Manually fill in the X's and O's for now
-  - Use a 3x3 Grid
-
-Build functionality that allows players to add marks to specific spot on the board.
-  - Tie it to the DOM
-  - Can't click on something already selected
-
-Each piece of functionality should be able to fit in the game, player or game board objects.
-  - Put the functionality into logical places
-
-Make sure that logic is built to decide a winner.
-
-Allow players to put in their names.
-Include a start / restart the game button.
-Display element that congratulates the winner
-*/
-
 const gameBoard = (function () {
   // We'll hold which player has where on the board by using the player object
   const startingGrid = [null, null, null, null, null, null, null, null, null];
-  const gameGrid = startingGrid;
+  let gameGrid = [...startingGrid];
 
   function updateGrid(index, player) {
     if (!gameGrid[index]) {
       gameGrid.splice(index, 1, player);
-      return player;
+      return true;
     }
+    return false;
+  }
+
+  // Using spread syntax to return a new array so user can't mess up the proper game grid
+  function getGameGrid() {
+    return [...gameGrid];
   }
 
   function resetGrid() {
-    gameGrid = startingGrid;
+    gameGrid = [...startingGrid];
   }
-  return { updateGrid, resetGrid, gameGrid };
+
+  function getWinner() {
+    return checkAcrossRows() || checkDownRows() || checkDiagonally();
+
+    function checkAcrossRows() {
+      for (let i = 0; i <= 6; i += 3) {
+        if (gameGrid.slice(i, i + 3).every((c) => c === gameGrid[i]))
+          return gameGrid[i];
+      }
+    }
+
+    function checkDownRows() {
+      for (let i = 0; i < 3; i++) {
+        if (
+          gameGrid[i] === gameGrid[i + 3] &&
+          gameGrid[i] === gameGrid[i + 6]
+        ) {
+          return gameGrid[i];
+        }
+      }
+    }
+
+    function checkDiagonally() {
+      const topCornerIndex = 0;
+      const topRightIndex = 2;
+      if (
+        gameGrid[topCornerIndex] === gameGrid[topCornerIndex + 4] &&
+        gameGrid[topCornerIndex] === gameGrid[topCornerIndex + 8]
+      )
+        return gameGrid[topCornerIndex];
+
+      if (
+        gameGrid[topRightIndex] === gameGrid[topRightIndex + 2] &&
+        gameGrid[topRightIndex] === gameGrid[topRightIndex + 4]
+      )
+        return gameGrid[topRightIndex];
+    }
+  }
+  return { updateGrid, resetGrid, getGameGrid, getWinner };
 })();
 
 const game = (function () {
-  const symbols = ["X", "O"];
-  const startingSymbol = "X";
   const maxRounds = 9;
 
-  let gameRunning = false;
+  let isStarted = false;
+  let winner = null;
+  let isDraw = false;
+
   let playerOne = null;
   let playerTwo = null;
 
@@ -56,32 +74,48 @@ const game = (function () {
   let currentPlayer = null;
 
   function startGame(playerOneName, playerTwoName) {
-    if (gameRunning) throw new Error("A game is currently being played!");
-    gameRunning = true;
+    if (isStarted) throw new Error("A game is currently being played!");
+    isStarted = true;
+    initPlayers(playerOneName, playerTwoName);
+  }
 
-    playerOne = player(playerOneName, getPlayerSymbol());
-    playerTwo = player(playerTwoName, getPlayerTwoSymbol());
+  function initPlayers(playerOneName, playerTwoName) {
+    // If a restarted game then reshuffle the symbols for the players
+    playerOne = player(playerOneName);
+    playerTwo = player(playerTwoName, playerOne);
+
     currentPlayer = getStartingPlayer();
   }
 
-  function getPlayerSymbol() {
-    return symbols[Math.round(Math.random())];
-  }
-
-  function getPlayerTwoSymbol() {
-    return symbols.filter((symbol) => playerOne.symbol !== symbol)[0];
-  }
-
   function getStartingPlayer() {
-    return playerOne.symbol === startingSymbol ? playerOne : playerTwo;
+    return [playerOne, playerTwo].filter((player) => player.starts)[0];
   }
 
-  function restartGame() {}
+  function restartGame(playerOneName, playerTwoName) {
+    if (!isStarted) throw new Error("No game started");
+    currentRound = 1;
+    winner = null;
+    isDraw = false;
 
-  function playRound(boxIndex) {
-    if (!gameRunning) throw new Error("A game hasn't been started!");
+    initPlayers(playerOneName, playerTwoName);
+    gameBoard.resetGrid();
+  }
 
-    gameBoard.updateGrid(boxIndex, currentPlayer);
+  function playRound(index) {
+    // If box already selected then do nothing
+    if (winner) throw new Error('Game is over!');
+    if (!gameBoard.updateGrid(index, currentPlayer)) return;
+
+    winner = gameBoard.getWinner();
+    if (winner) {
+      return;
+    }
+    // Handle a draw after max rounds
+    if (currentRound === maxRounds) {
+      isDraw = true;
+      return;
+    }
+
     currentRound++;
     swapPlayer();
   }
@@ -90,21 +124,35 @@ const game = (function () {
     currentPlayer = currentPlayer === playerOne ? playerTwo : playerOne;
   }
 
-  function checkForWinner() {}
+  function getCurrentPlayer() {
+    return currentPlayer;
+  }
+
+  function getGameStatus() {
+    return {
+      isDraw,
+      winner,
+      isStarted,
+    };
+  }
 
   return {
     startGame,
     restartGame,
     playRound,
+    getCurrentPlayer,
+    getGameStatus,
   };
 })();
 
 const displayController = (function () {
+  // Cache the DOM elements we need
   const gameBoardBoxes = document.querySelectorAll(".box");
   const playerOneNameInput = document.querySelector("#player-one-name");
   const playerTwoNameInput = document.querySelector("#player-two-name");
   const submitButton = document.querySelector("#submit");
   const resetButton = document.querySelector("#reset");
+  const messageDiv = document.querySelector("#message");
 
   // Validate form - check names don't match & values have been given
   function validateForm() {
@@ -120,47 +168,101 @@ const displayController = (function () {
     return true;
   }
 
-  function getPlayerNames() {
-    return {
-      playerOne: playerOneNameInput.value,
-      playerTwo: playerTwoNameInput.value,
-    };
+  function displayRoundMessage() {
+    const currentPlayer = game.getCurrentPlayer();
+    messageDiv.textContent = `${currentPlayer.symbol} - ${currentPlayer.name} to go!`;
+  }
+
+  function displayWinnerMessage(name) {
+    messageDiv.textContent = `The winner is ${name}!`;
+  }
+
+  function displayDrawMessage() {
+    messageDiv.textContent = "The game is a draw!";
   }
 
   // Setup Event Listeners
   gameBoardBoxes.forEach((box, index) => {
-    // Using bind which may not work?
+    // Using this method so I get a closure around the index variable
     box.addEventListener("click", () => playRound(index));
   });
 
-  // Start Game
   submitButton.addEventListener("click", startGame);
+  resetButton.addEventListener("click", restartGame);
 
   // Event handling functions
   function startGame() {
     if (!validateForm()) return;
-    const playerNames = getPlayerNames();
-    game.startGame(playerNames.playerOne, playerNames.playerTwo);
-  }
+    if (game.getGameStatus().isStarted)
+      throw new Error("A game has already been started!");
 
-  function playRound(selectedBoxIndex) {
-    game.playRound(selectedBoxIndex);
+    game.startGame(playerOneNameInput.value, playerTwoNameInput.value);
     renderBoard();
+    displayRoundMessage();
   }
 
-  // Clear Board
-  resetButton.addEventListener("click", game.restartGame);
+  function playRound(index) {
+    if (!game.getGameStatus().isStarted)
+      throw new Error("A game hasn't been started!");
+
+    game.playRound(index);
+    renderBoard();
+
+    const gameStatus = game.getGameStatus();
+    if (gameStatus.winner) {
+      displayWinnerMessage(gameStatus.winner.name);
+      return;
+    }
+
+    if (gameStatus.isDraw) {
+      displayDrawMessage();
+      return;
+    }
+
+    displayRoundMessage();
+  }
+
+  function restartGame() {
+    if (!validateForm()) return;
+    game.restartGame(playerOneNameInput.value, playerTwoNameInput.value);
+    renderBoard();
+    displayRoundMessage();
+  }
 
   // Render the game grid
   function renderBoard() {
     gameBoardBoxes.forEach((box, index) => {
-      if (gameBoard.gameGrid[index]) {
-        box.textContent = gameBoard.gameGrid[index].symbol;
+      const gameGrid = gameBoard.getGameGrid();
+      if (gameGrid[index]) {
+        box.textContent = gameGrid[index].symbol;
+      } else {
+        box.textContent = "";
       }
     });
   }
 })();
 
-function player(name, symbol) {
-  return { name, symbol };
+function player(name, opponent) {
+  const startingSymbol = "X";
+  const symbolSelection = ["X", "O"];
+  let symbol;
+  let starts = false;
+
+  function getPlayerSymbol() {
+    return symbolSelection[Math.round(Math.random())];
+  }
+
+  function getPlayerTwoSymbol() {
+    return symbolSelection.filter((symbol) => opponent.symbol !== symbol)[0];
+  }
+
+  if (opponent) {
+    symbol = getPlayerTwoSymbol(opponent);
+  } else {
+    symbol = getPlayerSymbol();
+  }
+
+  if (symbol === startingSymbol) starts = true;
+
+  return { name, symbol, starts };
 }

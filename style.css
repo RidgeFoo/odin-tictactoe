@@ -37,6 +37,7 @@ form {
   align-content: flex-start;
   gap: 10px;
   font-size: 18px;
+  margin-right: 50px;
 }
 
 .form-player {
@@ -80,6 +81,7 @@ input {
   display: grid;
   grid-template-columns: repeat(3, auto);
   background-color: var(--color-primary-font);
+  margin-right: 50px;
 }
 
 .box {
@@ -113,4 +115,9 @@ input {
   background-color: var(--color-primary-font);
   cursor: pointer;
   color: var(--color-primary-background);
+}
+
+#message {
+  font-size: 24px;
+  margin-top: 10px;
 }
