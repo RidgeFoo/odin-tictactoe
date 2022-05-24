@@ -25,7 +25,7 @@ const gameBoard = (function () {
 
     function checkAcrossRows() {
       for (let i = 0; i <= 6; i += 3) {
-        if (gameGrid.slice(i, i + 3).every((c) => c === gameGrid[i]))
+        if (gameGrid[i] && gameGrid.slice(i, i + 3).every((c) => c === gameGrid[i]))
           return gameGrid[i];
       }
     }
