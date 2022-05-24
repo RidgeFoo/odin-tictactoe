@@ -103,7 +103,7 @@ const game = (function () {
 
   function playRound(index) {
     // If box already selected then do nothing
-    if (winner) throw new Error('Game is over!');
+    if (winner) throw new Error("Game is over!");
     if (!gameBoard.updateGrid(index, currentPlayer)) return;
 
     winner = gameBoard.getWinner();
